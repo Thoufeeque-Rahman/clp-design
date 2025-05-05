@@ -1,29 +1,41 @@
-import express, { type Express } from "express";
+import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEvaluationSchema } from "@shared/schema";
 import { z } from "zod";
+import { setupAuth } from "./auth";
+
+// Authentication middleware for protected routes
+const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Unauthorized" });
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // API routes for classes
-  app.get("/api/classes", async (req, res) => {
+  // Setup authentication routes
+  setupAuth(app);
+  
+  // API routes for classes - authenticated routes
+  app.get("/api/classes", ensureAuthenticated, async (req, res) => {
     const classes = await storage.getClasses();
     res.json(classes);
   });
 
-  // API routes for subjects
-  app.get("/api/subjects", async (req, res) => {
+  // API routes for subjects - authenticated routes
+  app.get("/api/subjects", ensureAuthenticated, async (req, res) => {
     const subjects = await storage.getSubjects();
     res.json(subjects);
   });
 
-  // API routes for students
-  app.get("/api/students", async (req, res) => {
+  // API routes for students - authenticated routes
+  app.get("/api/students", ensureAuthenticated, async (req, res) => {
     const students = await storage.getStudents();
     res.json(students);
   });
 
-  app.get("/api/students/class/:classId", async (req, res) => {
+  app.get("/api/students/class/:classId", ensureAuthenticated, async (req, res) => {
     try {
       const classId = parseInt(req.params.classId);
       if (isNaN(classId)) {
@@ -37,13 +49,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API routes for evaluations
-  app.get("/api/evaluations", async (req, res) => {
+  // API routes for evaluations - authenticated routes
+  app.get("/api/evaluations", ensureAuthenticated, async (req, res) => {
     const evaluations = await storage.getEvaluations();
     res.json(evaluations);
   });
 
-  app.post("/api/evaluations", async (req, res) => {
+  app.post("/api/evaluations", ensureAuthenticated, async (req, res) => {
     try {
       const evaluation = insertEvaluationSchema.parse(req.body);
       const result = await storage.createEvaluation(evaluation);
@@ -56,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/evaluations/class/:classId", async (req, res) => {
+  app.get("/api/evaluations/class/:classId", ensureAuthenticated, async (req, res) => {
     try {
       const classId = parseInt(req.params.classId);
       if (isNaN(classId)) {
@@ -70,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/evaluations/subject/:subjectId", async (req, res) => {
+  app.get("/api/evaluations/subject/:subjectId", ensureAuthenticated, async (req, res) => {
     try {
       const subjectId = parseInt(req.params.subjectId);
       if (isNaN(subjectId)) {
@@ -84,7 +96,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/evaluations/student/:studentId", async (req, res) => {
+  app.get("/api/evaluations/student/:studentId", ensureAuthenticated, async (req, res) => {
     try {
       const studentId = parseInt(req.params.studentId);
       if (isNaN(studentId)) {
